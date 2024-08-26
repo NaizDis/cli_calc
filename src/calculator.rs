@@ -6,9 +6,9 @@ pub enum Operator {
     Div,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub enum Token {
-    Number(u32),
+    Number(f32),
     Op(Operator),
     Bracket(char),
 }
@@ -27,36 +27,86 @@ impl Calculator {
         let chars = expr.chars();
         let mut tokens: Vec<Token> = vec![];
         let mut paren = Vec::new();
+        let mut crr_num = String::new();
+
+        // Non Decimal Parsing
+        // for c in chars {
+        //     match c {
+        //         '0'..='9' => match tokens.last_mut() {
+        //             Some(Token::Number(n)) => {
+        //                 *n = *n * 10.0 + (c as u32 - 48) as f32;
+        //             }
+        //             _ => tokens.push(Token::Number((c as u32 - 48) as f32)),
+        //         },
+        //         '+' => tokens.push(Token::Op(Operator::Add)),
+        //         '-' => tokens.push(Token::Op(Operator::Sub)),
+        //         '/' => tokens.push(Token::Op(Operator::Div)),
+        //         '*' => tokens.push(Token::Op(Operator::Mul)),
+        //         '.' => tokens.push(Token::Decimal),
+        //         '(' => {
+        //             tokens.push(Token::Bracket('('));
+        //             paren.push(c);
+        //         }
+        //         ')' => {
+        //             tokens.push(Token::Bracket(')'));
+        //             if let Some(p) = paren.pop() {
+        //                 if p != '(' {
+        //                     return Err(Error::MismatchedParen);
+        //                 }
+        //             } else {
+        //                 return Err(Error::MismatchedParen);
+        //             }
+        //         }
+        //         ' ' => {}
+        //         '\n' => {}
+        //         _ => return Err(Error::BadToken(c)),
+        //     }
+        // }
+
+        //Decimal Implementation
         for c in chars {
-            match c {
-                '0'..='9' => match tokens.last_mut() {
-                    Some(Token::Number(n)) => {
-                        *n = *n * 10 + (c as u32 - 48);
+            //Fomration of number then add to tokens
+            if c.is_digit(10) || c == '.' {
+                crr_num.push(c);
+            } else {
+                if !crr_num.is_empty() {
+                    if let Ok(num) = crr_num.parse::<f32>() {
+                        tokens.push(Token::Number(num));
                     }
-                    _ => tokens.push(Token::Number(c as u32 - 48)),
-                },
-                '+' => tokens.push(Token::Op(Operator::Add)),
-                '-' => tokens.push(Token::Op(Operator::Sub)),
-                '/' => tokens.push(Token::Op(Operator::Div)),
-                '*' => tokens.push(Token::Op(Operator::Mul)),
-                '(' => {
-                    tokens.push(Token::Bracket('('));
-                    paren.push(c);
+                    crr_num.clear();
                 }
-                ')' => {
-                    tokens.push(Token::Bracket(')'));
-                    if let Some(p) = paren.pop() {
-                        if p != '(' {
+
+                match c {
+                    '+' => tokens.push(Token::Op(Operator::Add)),
+                    '-' => tokens.push(Token::Op(Operator::Sub)),
+                    '/' => tokens.push(Token::Op(Operator::Div)),
+                    '*' => tokens.push(Token::Op(Operator::Mul)),
+                    '(' => {
+                        tokens.push(Token::Bracket('('));
+                        paren.push(c);
+                    }
+                    ')' => {
+                        tokens.push(Token::Bracket(')'));
+                        if let Some(p) = paren.pop() {
+                            if p != '(' {
+                                return Err(Error::MismatchedParen);
+                            }
+                        } else {
                             return Err(Error::MismatchedParen);
                         }
-                    } else {
-                        return Err(Error::MismatchedParen);
                     }
+                    ' ' => {}
+                    '\n' => {}
+                    _ => return Err(Error::BadToken(c)),
                 }
-                ' ' => {}
-                '\n' => {}
-                _ => return Err(Error::BadToken(c)),
             }
+        }
+        //To check is last number added
+        if !crr_num.is_empty() {
+            if let Ok(num) = crr_num.parse::<f32>() {
+                tokens.push(Token::Number(num));
+            }
+            crr_num.clear();
         }
         if !paren.is_empty() {
             return Err(Error::MismatchedParen);
@@ -103,7 +153,7 @@ impl Calculator {
         while let Some(token) = post.pop() {
             match token {
                 Token::Number(num) => {
-                    stack.push(num as f32);
+                    stack.push(num);
                 }
                 Token::Op(Operator::Add) => {
                     let right = stack.pop().unwrap();
